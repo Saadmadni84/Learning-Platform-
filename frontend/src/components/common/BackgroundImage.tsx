@@ -17,7 +17,7 @@ export default function BackgroundImage({
   priority = false 
 }: BackgroundImageProps) {
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative pointer-events-none z-[-1] ${className}`}>
       <Image
         src={src}
         alt={alt}

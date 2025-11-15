@@ -57,12 +57,10 @@ export class PaymentController {
       }
 
       // Check if user already enrolled
-      const existingEnrollment = await prisma.courseEnrollment.findUnique({
+      const existingEnrollment = await prisma.enrollment.findFirst({
         where: {
-          userId_courseId: {
-            userId: req.userId!,
-            courseId
-          }
+          userId: req.userId!,
+          courseId
         }
       });
 
@@ -508,12 +506,10 @@ export class PaymentController {
       });
 
       // Remove course enrollment
-      await prisma.courseEnrollment.delete({
+      await prisma.enrollment.deleteMany({
         where: {
-          userId_courseId: {
-            userId: req.userId!,
-            courseId: payment.courseId
-          }
+          userId: req.userId!,
+          courseId: payment.courseId
         }
       });
 
@@ -614,7 +610,7 @@ export class PaymentController {
         });
 
         // Create course enrollment
-        await tx.courseEnrollment.create({
+        await tx.enrollment.create({
           data: {
             userId: payment.userId,
             courseId: payment.courseId
@@ -653,6 +649,231 @@ export class PaymentController {
     } catch (error) {
       console.error('Complete payment error:', error);
       throw error;
+    }
+  }
+
+  // POST /payments/create-intent
+  static async createPaymentIntent(req: AuthRequest, res: Response) {
+    return PaymentController.initiatePayment(req, res);
+  }
+
+  // POST /payments/confirm
+  static async confirmPayment(req: AuthRequest, res: Response) {
+    try {
+      const { paymentIntentId, paymentMethodId, returnUrl } = req.body;
+
+      if (!paymentIntentId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment intent ID is required'
+        });
+      }
+
+      // For Stripe, confirm the payment intent
+      if (paymentMethodId) {
+        await stripe.paymentIntents.confirm(paymentIntentId, {
+          payment_method: paymentMethodId,
+          return_url: returnUrl
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment confirmed successfully'
+      });
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to confirm payment'
+      });
+    }
+  }
+
+  // GET /payments/methods
+  static async getPaymentMethods(req: AuthRequest, res: Response) {
+    try {
+      // This would typically fetch saved payment methods from Stripe
+      // For now, return empty array
+      res.status(200).json({
+        success: true,
+        methods: []
+      });
+    } catch (error) {
+      console.error('Get payment methods error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get payment methods'
+      });
+    }
+  }
+
+  // POST /payments/methods
+  static async addPaymentMethod(req: AuthRequest, res: Response) {
+    try {
+      // This would typically create a payment method in Stripe
+      res.status(200).json({
+        success: true,
+        message: 'Payment method added successfully'
+      });
+    } catch (error) {
+      console.error('Add payment method error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add payment method'
+      });
+    }
+  }
+
+  // DELETE /payments/methods/:methodId
+  static async removePaymentMethod(req: AuthRequest, res: Response) {
+    try {
+      const { methodId } = req.params;
+      
+      // This would typically delete a payment method from Stripe
+      res.status(200).json({
+        success: true,
+        message: 'Payment method removed successfully'
+      });
+    } catch (error) {
+      console.error('Remove payment method error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to remove payment method'
+      });
+    }
+  }
+
+  // GET /payments/transactions
+  static async getTransactions(req: AuthRequest, res: Response) {
+    try {
+      const { limit = 10, offset = 0, status, startDate, endDate } = req.query;
+
+      const where: any = { userId: req.userId! };
+      if (status) where.status = status;
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = new Date(startDate as string);
+        if (endDate) where.createdAt.lte = new Date(endDate as string);
+      }
+
+      const transactions = await prisma.payment.findMany({
+        where,
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              thumbnail: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: parseInt(limit as string),
+        skip: parseInt(offset as string)
+      });
+
+      res.status(200).json({
+        success: true,
+        transactions
+      });
+    } catch (error) {
+      console.error('Get transactions error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get transactions'
+      });
+    }
+  }
+
+  // GET /payments/transactions/:transactionId
+  static async getTransactionDetails(req: AuthRequest, res: Response) {
+    try {
+      const { transactionId } = req.params;
+
+      const transaction = await prisma.payment.findFirst({
+        where: {
+          id: transactionId,
+          userId: req.userId!
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              thumbnail: true,
+              instructor: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!transaction) {
+        return res.status(404).json({
+          success: false,
+          message: 'Transaction not found'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        transaction
+      });
+    } catch (error) {
+      console.error('Get transaction details error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get transaction details'
+      });
+    }
+  }
+
+  // POST /payments/refunds
+  static async createRefund(req: AuthRequest, res: Response) {
+    return PaymentController.initiateRefund(req, res);
+  }
+
+  // GET /payments/refunds
+  static async getRefunds(req: AuthRequest, res: Response) {
+    try {
+      const { limit = 10, offset = 0, status, transactionId } = req.query;
+
+      const where: any = { 
+        userId: req.userId!,
+        status: 'refunded'
+      };
+      if (transactionId) where.id = transactionId;
+
+      const refunds = await prisma.payment.findMany({
+        where,
+        include: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              thumbnail: true
+            }
+          }
+        },
+        orderBy: { refundedAt: 'desc' },
+        take: parseInt(limit as string),
+        skip: parseInt(offset as string)
+      });
+
+      res.status(200).json({
+        success: true,
+        refunds
+      });
+    } catch (error) {
+      console.error('Get refunds error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get refunds'
+      });
     }
   }
 }

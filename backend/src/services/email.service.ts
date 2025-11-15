@@ -1,283 +1,372 @@
-// services/email.service.ts
-import nodemailer from 'nodemailer';
+import nodemailer, { Transporter, SendMailOptions } from 'nodemailer';
+import dotenv from 'dotenv';
 
-// Email interfaces for type safety
-export interface EmailData {
+dotenv.config();
+
+export interface EmailConfig {
+  service: string;
+  host?: string;
+  port?: number;
+  secure?: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+}
+
+export interface EmailOptions {
   to: string | string[];
   subject: string;
-  html?: string;
   text?: string;
-  from?: string;
+  html?: string;
+  attachments?: Array<{
+    filename: string;
+    path?: string;
+    content?: Buffer | string;
+    contentType?: string;
+  }>;
 }
 
 export interface WelcomeEmailData {
+  username: string;
   email: string;
-  name: string;
-  loginUrl?: string;
+  verificationUrl?: string;
+}
+
+export interface CourseNotificationData {
+  username: string;
+  courseName: string;
+  courseUrl: string;
+  achievement?: string;
 }
 
 export interface PasswordResetData {
-  email: string;
-  name: string;
+  username: string;
   resetUrl: string;
-  expiryTime?: string;
+  expirationTime: string;
 }
 
-export interface AchievementEmailData {
-  email: string;
-  name: string;
-  achievementName: string;
-  badgeUrl?: string;
-  points: number;
-}
+class EmailService {
+  private transporter: Transporter;
+  private fromEmail: string;
 
-export interface CourseCompletionData {
-  email: string;
-  name: string;
-  courseName: string;
-  certificateUrl?: string;
-  completionDate: string;
-}
+  constructor() {
+    this.fromEmail = process.env.EMAIL_FROM || 'noreply@acadevia.com';
+    this.transporter = this.createTransporter(); // ✅ Correct method name
+  }
 
-// Create transporter
-const createTransporter = () => {
-  return nodemailer.createTransporter({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-};
-
-// Generic email sending function
-export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
-  try {
-    const transporter = createTransporter();
-    
-    const mailOptions = {
-      from: emailData.from || process.env.FROM_EMAIL || process.env.SMTP_USER,
-      to: emailData.to,
-      subject: emailData.subject,
-      html: emailData.html,
-      text: emailData.text,
+  private createTransporter(): Transporter { // ✅ Correct method name
+    const emailConfig: EmailConfig = {
+      service: process.env.EMAIL_SERVICE || 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER || '',
+        pass: process.env.EMAIL_PASS || '',
+      },
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', result.messageId);
-    return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
+    // Alternative configuration for custom SMTP
+    if (process.env.EMAIL_HOST) {
+      return nodemailer.createTransport({ // ✅ Correct nodemailer method
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT || '587'),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: emailConfig.auth,
+      });
+    }
+
+    return nodemailer.createTransport(emailConfig); // ✅ Correct nodemailer method
   }
-};
 
-// Welcome email for new users
-export const sendWelcomeEmail = async (data: WelcomeEmailData): Promise<boolean> => {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-        <h1 style="color: white; margin: 0;">Welcome to Our Learning Platform! 🎉</h1>
-      </div>
-      
-      <div style="padding: 30px; background-color: #f8f9fa;">
-        <h2 style="color: #333;">Hello ${data.name}!</h2>
-        
-        <p style="color: #666; line-height: 1.6;">
-          Welcome to our gamified learning platform! We're excited to have you join our community of learners.
-        </p>
-        
-        <p style="color: #666; line-height: 1.6;">
-          Get ready to:
-        </p>
-        
-        <ul style="color: #666; line-height: 1.8;">
-          <li>📚 Access interactive courses</li>
-          <li>🏆 Earn achievements and badges</li>
-          <li>⭐ Collect points and level up</li>
-          <li>🤝 Connect with fellow learners</li>
-        </ul>
-        
-        ${data.loginUrl ? `
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.loginUrl}" 
-               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                      color: white; 
-                      padding: 12px 30px; 
-                      text-decoration: none; 
-                      border-radius: 25px; 
-                      font-weight: bold;">
-              Start Learning Now
-            </a>
+  /**
+   * Send a generic email
+   */
+  async sendEmail(options: EmailOptions): Promise<boolean> {
+    try {
+      const mailOptions: SendMailOptions = {
+        from: this.fromEmail,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+        attachments: options.attachments,
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Email sent successfully:', info.messageId);
+      return true;
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send welcome email to new users
+   */
+  async sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Acadevia</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .button { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 25px; margin-top: 20px; }
+          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎓 Welcome to Acadevia!</h1>
+            <p>Your gamified learning journey begins here</p>
           </div>
-        ` : ''}
-        
-        <p style="color: #666; margin-top: 30px;">
-          Happy learning!<br>
-          The Learning Platform Team
-        </p>
-      </div>
-    </div>
-  `;
-
-  return await sendEmail({
-    to: data.email,
-    subject: '🎉 Welcome to Our Learning Platform!',
-    html,
-  });
-};
-
-// Password reset email
-export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<boolean> => {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #f56565; padding: 20px; text-align: center;">
-        <h1 style="color: white; margin: 0;">Password Reset Request 🔐</h1>
-      </div>
-      
-      <div style="padding: 30px; background-color: #f8f9fa;">
-        <h2 style="color: #333;">Hello ${data.name},</h2>
-        
-        <p style="color: #666; line-height: 1.6;">
-          We received a request to reset your password. Click the button below to create a new password:
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${data.resetUrl}" 
-             style="background: #f56565; 
-                    color: white; 
-                    padding: 12px 30px; 
-                    text-decoration: none; 
-                    border-radius: 25px; 
-                    font-weight: bold;">
-            Reset Password
-          </a>
-        </div>
-        
-        ${data.expiryTime ? `
-          <p style="color: #e53e3e; text-align: center; font-size: 14px;">
-            This link will expire in ${data.expiryTime}
-          </p>
-        ` : ''}
-        
-        <p style="color: #666; font-size: 14px; margin-top: 30px;">
-          If you didn't request this password reset, please ignore this email or contact support if you have concerns.
-        </p>
-        
-        <p style="color: #666; font-size: 12px; margin-top: 20px;">
-          For security reasons, this link can only be used once.
-        </p>
-      </div>
-    </div>
-  `;
-
-  return await sendEmail({
-    to: data.email,
-    subject: '🔐 Password Reset Request',
-    html,
-  });
-};
-
-// Achievement unlock email
-export const sendAchievementEmail = async (data: AchievementEmailData): Promise<boolean> => {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%); padding: 20px; text-align: center;">
-        <h1 style="color: #333; margin: 0;">🏆 Achievement Unlocked! 🏆</h1>
-      </div>
-      
-      <div style="padding: 30px; background-color: #f8f9fa; text-align: center;">
-        <h2 style="color: #333;">Congratulations ${data.name}!</h2>
-        
-        ${data.badgeUrl ? `
-          <div style="margin: 20px 0;">
-            <img src="${data.badgeUrl}" alt="Achievement Badge" style="max-width: 120px; height: auto;">
+          <div class="content">
+            <h2>Hello ${data.username}! 👋</h2>
+            <p>We're excited to have you join our gamified learning platform. Get ready to:</p>
+            <ul>
+              <li>🏆 Earn achievements and badges</li>
+              <li>📈 Track your learning progress</li>
+              <li>🎮 Complete interactive challenges</li>
+              <li>🤝 Connect with fellow learners</li>
+            </ul>
+            ${data.verificationUrl ? `<p>Please verify your account to get started:</p><a href="${data.verificationUrl}" class="button">Verify Account</a>` : '<p>Your account is ready! Start learning today.</p>'}
           </div>
-        ` : ''}
-        
-        <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h3 style="color: #333; margin: 0 0 10px 0;">${data.achievementName}</h3>
-          <p style="color: #ffd700; font-size: 24px; font-weight: bold; margin: 0;">+${data.points} Points!</p>
-        </div>
-        
-        <p style="color: #666; line-height: 1.6;">
-          You've earned this achievement through your dedication and hard work. Keep up the excellent progress!
-        </p>
-        
-        <div style="margin: 30px 0;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" 
-             style="background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%); 
-                    color: #333; 
-                    padding: 12px 30px; 
-                    text-decoration: none; 
-                    border-radius: 25px; 
-                    font-weight: bold;">
-            View Dashboard
-          </a>
-        </div>
-      </div>
-    </div>
-  `;
-
-  return await sendEmail({
-    to: data.email,
-    subject: `🏆 Achievement Unlocked: ${data.achievementName}`,
-    html,
-  });
-};
-
-// Course completion email
-export const sendCourseCompletionEmail = async (data: CourseCompletionData): Promise<boolean> => {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); padding: 20px; text-align: center;">
-        <h1 style="color: white; margin: 0;">🎓 Course Completed! 🎓</h1>
-      </div>
-      
-      <div style="padding: 30px; background-color: #f8f9fa;">
-        <h2 style="color: #333;">Excellent work, ${data.name}!</h2>
-        
-        <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h3 style="color: #48bb78; margin: 0 0 10px 0;">📚 ${data.courseName}</h3>
-          <p style="color: #666; margin: 0;">Completed on ${data.completionDate}</p>
-        </div>
-        
-        <p style="color: #666; line-height: 1.6;">
-          Congratulations on completing this course! Your commitment to learning is truly inspiring.
-        </p>
-        
-        ${data.certificateUrl ? `
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.certificateUrl}" 
-               style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); 
-                      color: white; 
-                      padding: 12px 30px; 
-                      text-decoration: none; 
-                      border-radius: 25px; 
-                      font-weight: bold;">
-              Download Certificate
-            </a>
+          <div class="footer">
+            <p>Happy learning!<br>The Acadevia Team</p>
           </div>
-        ` : ''}
-        
-        <p style="color: #666; margin-top: 30px;">
-          Ready for your next challenge? Explore more courses on your dashboard!
-        </p>
-      </div>
-    </div>
-  `;
+        </div>
+      </body>
+      </html>
+    `;
 
-  return await sendEmail({
-    to: data.email,
-    subject: `🎓 Congratulations! You completed ${data.courseName}`,
-    html,
-  });
-};
+    return this.sendEmail({
+      to: data.email,
+      subject: '🎓 Welcome to Acadevia - Your Learning Adventure Starts Now!',
+      html: htmlContent,
+    });
+  }
 
-// Utility function to validate email
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+  /**
+   * Send course completion or achievement notification
+   */
+  async sendAchievementEmail(data: CourseNotificationData): Promise<boolean> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Achievement Unlocked!</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; text-align: center; }
+          .achievement-badge { font-size: 4em; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; text-decoration: none; border-radius: 25px; margin-top: 20px; }
+          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🏆 Achievement Unlocked!</h1>
+          </div>
+          <div class="content">
+            <div class="achievement-badge">🎉</div>
+            <h2>Congratulations ${data.username}!</h2>
+            <p>You've successfully completed: <strong>${data.courseName}</strong></p>
+            ${data.achievement ? `<p>🏅 <strong>Achievement:</strong> ${data.achievement}</p>` : ''}
+            <p>Keep up the excellent work and continue your learning journey!</p>
+            <a href="${data.courseUrl}" class="button">Continue Learning</a>
+          </div>
+          <div class="footer">
+            <p>Keep learning, keep growing!<br>The Acadevia Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: data.username, // Assuming username is email, adjust as needed
+      subject: '🏆 Achievement Unlocked - Congratulations!',
+      html: htmlContent,
+    });
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(data: PasswordResetData): Promise<boolean> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset Request</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .button { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; text-decoration: none; border-radius: 25px; margin-top: 20px; }
+          .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Password Reset Request</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${data.username},</h2>
+            <p>We received a request to reset your password for your Acadevia account.</p>
+            <p>Click the button below to reset your password:</p>
+            <a href="${data.resetUrl}" class="button">Reset Password</a>
+            <div class="warning">
+              <strong>⚠️ Security Notice:</strong><br>
+              This link will expire on ${data.expirationTime}. If you didn't request this password reset, please ignore this email.
+            </div>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #6c757d;">${data.resetUrl}</p>
+          </div>
+          <div class="footer">
+            <p>Stay secure!<br>The Acadevia Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: data.username, // Assuming username is email, adjust as needed
+      subject: '🔐 Password Reset Request - Acadevia',
+      html: htmlContent,
+    });
+  }
+
+  /**
+   * Send course enrollment confirmation
+   */
+  async sendCourseEnrollmentEmail(data: CourseNotificationData): Promise<boolean> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Course Enrollment Confirmed</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .button { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 25px; margin-top: 20px; }
+          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📚 Enrollment Confirmed!</h1>
+          </div>
+          <div class="content">
+            <h2>Great news, ${data.username}!</h2>
+            <p>You've successfully enrolled in: <strong>${data.courseName}</strong></p>
+            <p>🎯 Get ready to:</p>
+            <ul>
+              <li>Master new skills through interactive lessons</li>
+              <li>Earn points and unlock achievements</li>
+              <li>Track your progress with detailed analytics</li>
+              <li>Join a community of motivated learners</li>
+            </ul>
+            <p>Start your learning journey now:</p>
+            <a href="${data.courseUrl}" class="button">Start Learning</a>
+          </div>
+          <div class="footer">
+            <p>Happy learning!<br>The Acadevia Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: data.username, // Assuming username is email, adjust as needed
+      subject: `📚 Welcome to ${data.courseName} - Let's Start Learning!`,
+      html: htmlContent,
+    });
+  }
+
+  /**
+   * Send OTP email for phone verification
+   */
+  async sendOTPEmail(email: string, otp: string, userName: string): Promise<boolean> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your OTP Code</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; text-align: center; }
+          .otp-code { font-size: 2.5em; font-weight: bold; color: #667eea; letter-spacing: 0.1em; margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 10px; }
+          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Your OTP Code</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${userName}!</h2>
+            <p>Use this OTP code to complete your verification:</p>
+            <div class="otp-code">${otp}</div>
+            <p><strong>This code will expire in 5 minutes.</strong></p>
+            <p>If you didn't request this code, please ignore this email.</p>
+          </div>
+          <div class="footer">
+            <p>Stay secure!<br>The Acadevia Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: '🔐 Your OTP Code - Acadevia',
+      html: htmlContent,
+    });
+  }
+
+  /**
+   * Test email configuration
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.transporter.verify();
+      console.log('Email service is ready to send emails');
+      return true;
+    } catch (error) {
+      console.error('Email service configuration error:', error);
+      return false;
+    }
+  }
+}
+
+export default new EmailService();

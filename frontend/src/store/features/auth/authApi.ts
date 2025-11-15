@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {
   ApiResponse,
   AuthResponse,
@@ -12,13 +12,13 @@ class AuthAPI {
    */
   async sendOTP(phoneNumber: string, userType: string): Promise<ApiResponse> {
     try {
-      const response = await api.post<ApiResponse>("/auth/send-otp", {
+      const response = await apiClient.post<ApiResponse>("/auth/send-otp", {
         phoneNumber,
         userType,
       });
-      return response.data;
+      return response;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to send OTP");
+      throw new Error(error.message || "Failed to send OTP");
     }
   }
 
@@ -31,21 +31,21 @@ class AuthAPI {
     userType: string
   ): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>("/auth/verify-otp", {
+      const response = await apiClient.post<AuthResponse>("/auth/verify-otp", {
         phoneNumber,
         otp,
         userType,
       });
 
       // Store token in localStorage
-      if (response.data.token) {
+      if (response.data?.token) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("userType", userType);
       }
 
-      return response.data;
+      return response.data!;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Invalid OTP");
+      throw new Error(error.message || "Invalid OTP");
     }
   }
 
@@ -60,10 +60,10 @@ class AuthAPI {
     userType: string;
   }): Promise<ApiResponse> {
     try {
-      const response = await api.post<ApiResponse>("/auth/register", data);
-      return response.data;
+      const response = await apiClient.post<ApiResponse>("/auth/register", data);
+      return response;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Registration failed");
+      throw new Error(error.message || "Registration failed");
     }
   }
 
@@ -72,10 +72,10 @@ class AuthAPI {
    */
   async getCurrentUser(): Promise<any> {
     try {
-      const response = await api.get("/auth/me");
+      const response = await apiClient.get("/auth/me");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch user");
+      throw new Error(error.message || "Failed to fetch user");
     }
   }
 
@@ -84,16 +84,16 @@ class AuthAPI {
    */
   async refreshToken(): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>("/auth/refresh");
+      const response = await apiClient.post<AuthResponse>("/auth/refresh");
 
-      if (response.data.token) {
+      if (response.data?.token) {
         localStorage.setItem("token", response.data.token);
       }
 
-      return response.data;
+      return response.data!;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to refresh token"
+        error.message || "Failed to refresh token"
       );
     }
   }
@@ -103,7 +103,7 @@ class AuthAPI {
    */
   async logout(): Promise<void> {
     try {
-      await api.post("/auth/logout");
+      await apiClient.post("/auth/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -121,13 +121,13 @@ class AuthAPI {
    */
   async resendOTP(phoneNumber: string, userType: string): Promise<ApiResponse> {
     try {
-      const response = await api.post<ApiResponse>("/auth/resend-otp", {
+      const response = await apiClient.post<ApiResponse>("/auth/resend-otp", {
         phoneNumber,
         userType,
       });
-      return response.data;
+      return response;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to resend OTP");
+      throw new Error(error.message || "Failed to resend OTP");
     }
   }
 
@@ -138,11 +138,11 @@ class AuthAPI {
     phoneNumber: string
   ): Promise<{ exists: boolean; userType?: string }> {
     try {
-      const response = await api.get(`/auth/check-phone/${phoneNumber}`);
+      const response = await apiClient.get(`/auth/check-phone/${phoneNumber}`);
       return response.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to check phone number"
+        error.message || "Failed to check phone number"
       );
     }
   }
@@ -156,11 +156,11 @@ class AuthAPI {
     avatar?: string;
   }): Promise<any> {
     try {
-      const response = await api.put("/auth/profile", data);
+      const response = await apiClient.put("/auth/profile", data);
       return response.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to update profile"
+        error.message || "Failed to update profile"
       );
     }
   }
@@ -170,16 +170,16 @@ class AuthAPI {
    */
   async changePhoneNumberRequest(newPhoneNumber: string): Promise<ApiResponse> {
     try {
-      const response = await api.post<ApiResponse>(
+      const response = await apiClient.post<ApiResponse>(
         "/auth/change-phone-request",
         {
           newPhoneNumber,
         }
       );
-      return response.data;
+      return response;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to initiate phone change"
+        error.message || "Failed to initiate phone change"
       );
     }
   }
@@ -192,17 +192,17 @@ class AuthAPI {
     otp: string
   ): Promise<ApiResponse> {
     try {
-      const response = await api.post<ApiResponse>(
+      const response = await apiClient.post<ApiResponse>(
         "/auth/change-phone-confirm",
         {
           newPhoneNumber,
           otp,
         }
       );
-      return response.data;
+      return response;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to change phone number"
+        error.message || "Failed to change phone number"
       );
     }
   }
@@ -212,18 +212,16 @@ class AuthAPI {
    */
   async deleteAccount(password?: string): Promise<ApiResponse> {
     try {
-      const response = await api.delete<ApiResponse>("/auth/account", {
-        data: { password },
-      });
+      const response = await apiClient.delete<ApiResponse>("/auth/account");
 
       // Clear local storage
       localStorage.removeItem("token");
       localStorage.removeItem("userType");
 
-      return response.data;
+      return response;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Failed to delete account"
+        error.message || "Failed to delete account"
       );
     }
   }

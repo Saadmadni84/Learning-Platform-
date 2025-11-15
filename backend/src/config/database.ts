@@ -8,10 +8,10 @@ declare global {
 // Database configuration options for the learning platform
 const prismaOptions = {
   log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error'] as const
-    : ['error'] as const,
+    ? (['query', 'info', 'warn', 'error'] as any)
+    : (['error'] as any),
   
-  // Error formatting for better debugging
+  // Errorf formatting for better debugging
   errorFormat: 'pretty' as const,
   
   // Connection pool settings optimized for learning platform
@@ -120,7 +120,7 @@ export const withRetry = async <T>(
  * Transaction wrapper with error handling
  */
 export const executeTransaction = async <T>(
-  transactionFn: (tx: Parameters<typeof prisma.$transaction>[0]) => Promise<T>
+  transactionFn: (tx: any) => Promise<T>
 ): Promise<T> => {
   return await withRetry(async () => {
     return await prisma.$transaction(transactionFn, {
@@ -158,17 +158,17 @@ export const cleanup = {
   cleanExpiredOTPs: async (): Promise<number> => {
     const result = await prisma.user.updateMany({
       where: {
-        otpExpiry: {
+        emailVerificationExpires: {
           lt: new Date()
         }
       },
       data: {
-        otp: null,
-        otpExpiry: null
+        emailVerificationToken: null,
+        emailVerificationExpires: null
       }
     });
     
-    console.log(`🧹 Cleaned ${result.count} expired OTPs`);
+    console.log(`🧹 Cleaned ${result.count} expired verification tokens`);
     return result.count;
   },
   
@@ -201,21 +201,11 @@ export const cleanup = {
 export const getStats = {
   // Get user statistics
   userStats: async () => {
-    const [totalUsers, verifiedUsers, activeUsers] = await Promise.all([
+    const [totalUsers, verifiedUsers] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({
         where: {
-          OR: [
-            { isEmailVerified: true },
-            { isPhoneVerified: true }
-          ]
-        }
-      }),
-      prisma.user.count({
-        where: {
-          lastActiveAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-          }
+          isVerified: true
         }
       })
     ]);
@@ -223,7 +213,7 @@ export const getStats = {
     return {
       totalUsers,
       verifiedUsers,
-      activeUsers,
+      activeUsers: totalUsers, // Using total users as active users for now
       verificationRate: totalUsers > 0 ? (verifiedUsers / totalUsers * 100).toFixed(2) : '0'
     };
   },

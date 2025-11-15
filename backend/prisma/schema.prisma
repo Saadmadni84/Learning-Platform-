@@ -13,7 +13,7 @@ model User {
   email                     String    @unique
   username                  String    @unique
   password                  String
-  isVerified                Boolean   @default(false)  // Your new field
+  isVerified                Boolean   @default(false)
   emailVerificationToken    String?
   emailVerificationExpires  DateTime?
   passwordResetToken        String?
@@ -25,19 +25,29 @@ model User {
   lastName                  String?
   avatar                    String?
   bio                       String?
+  phoneNumber               String?
+  dateOfBirth               DateTime?
+  interests                 String[]  @default([])
   
   // Game profile fields
   level                     Int       @default(1)
   experience                Int       @default(0)
   points                    Int       @default(0)
   badges                    String[]  @default([])
-  achievements              String[]  @default([])
+  achievementIds            String[]  @default([])
+  streakDays                Int       @default(0)
+  completedCourses          Int       @default(0)
+  lastLoginAt               DateTime?
   
-  // Relations - ADD THESE MISSING FIELDS
-  instructedCourses         Course[]  @relation("CourseInstructor")  // This was missing!
+  // Relations
+  instructedCourses         Course[]  @relation("CourseInstructor")
   enrollments               Enrollment[]
   quizAttempts              QuizAttempt[]
   gameProgress              GameProgress[]
+  progress                  Progress[]
+  achievements              UserAchievement[]
+  notifications             Notification[]
+  challengeAttempts         ChallengeAttempt[]
   
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
@@ -54,12 +64,19 @@ model Course {
   level          CourseLevel  @default(BEGINNER)
   duration       Int          // in minutes
   instructorId   String
+  category       String?
+  tags           String[]     @default([])
+  isPublished    Boolean      @default(false)
+  difficulty     Int          @default(1) // 1-5 scale
+  sources        Json?        // Array of source objects with YouTube links and other resources
   
   // Relations
   instructor     User         @relation("CourseInstructor", fields: [instructorId], references: [id])
   lectures       Lecture[]
   enrollments    Enrollment[]
   quizzes        Quiz[]
+  progress       Progress[]
+  gameProgress   GameProgress[]
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -97,6 +114,7 @@ model Lecture {
   
   // Relations
   course         Course      @relation(fields: [courseId], references: [id])
+  lectureProgress LectureProgress[]
   
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -161,18 +179,150 @@ model QuizAttempt {
 model GameProgress {
   id             String    @id @default(cuid())
   userId         String
-  type           GameType  // QUIZ, COURSE_COMPLETION, etc.
-  referenceId    String    // ID of the related entity (quiz, course, etc.)
+  courseId       String?
+  lectureId      String?
+  quizId         String?
+  type           GameType
   pointsEarned   Int
   experienceGained Int
   achievementUnlocked String?
+  lastActivityAt DateTime?
   
   // Relations
   user           User      @relation(fields: [userId], references: [id])
+  course         Course?   @relation(fields: [courseId], references: [id])
   
   createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@map("game_progress")
+}
+
+model Progress {
+  id                String    @id @default(cuid())
+  userId            String
+  courseId          String
+  progressPercentage Float     @default(0)
+  timeSpent         Int        @default(0) // in minutes
+  isCompleted       Boolean    @default(false)
+  completedAt       DateTime?
+  lastAccessedAt    DateTime?
+  
+  // Relations
+  user              User       @relation(fields: [userId], references: [id])
+  course            Course     @relation(fields: [courseId], references: [id])
+  lectureProgress   LectureProgress[]
+  
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([userId, courseId])
+  @@map("progress")
+}
+
+model LectureProgress {
+  id                String    @id @default(cuid())
+  progressId        String
+  lectureId         String
+  isCompleted       Boolean   @default(false)
+  timeSpent         Int       @default(0) // in minutes
+  completedAt       DateTime?
+  
+  // Relations
+  progress          Progress  @relation(fields: [progressId], references: [id])
+  lecture           Lecture   @relation(fields: [lectureId], references: [id])
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([progressId, lectureId])
+  @@map("lecture_progress")
+}
+
+model Badge {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  color       String
+  points      Int       @default(0)
+  category    String?
+  
+  // Relations
+  achievements UserAchievement[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("badges")
+}
+
+model UserAchievement {
+  id        String    @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime  @default(now())
+  
+  // Relations
+  user      User      @relation(fields: [userId], references: [id])
+  badge     Badge     @relation(fields: [badgeId], references: [id])
+  
+  @@unique([userId, badgeId])
+  @@map("user_achievements")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean   @default(false)
+  data      Json?
+  
+  // Relations
+  user      User      @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("notifications")
+}
+
+model Challenge {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  type        ChallengeType
+  difficulty  Int        @default(1) // 1-5 scale
+  timeLimit   Int?       // in seconds
+  points      Int        @default(10)
+  isActive    Boolean    @default(true)
+  
+  // Relations
+  attempts    ChallengeAttempt[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("challenges")
+}
+
+model ChallengeAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  challengeId String
+  score       Float
+  timeSpent   Int       // in seconds
+  completedAt DateTime
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id])
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  
+  createdAt   DateTime  @default(now())
+
+  @@map("challenge_attempts")
 }
 
 // Enums
@@ -207,4 +357,22 @@ enum GameType {
   DAILY_LOGIN
   STREAK_ACHIEVEMENT
   LEVEL_UP
+  LECTURE_COMPLETION
+  CHALLENGE_COMPLETION
+}
+
+enum NotificationType {
+  ACHIEVEMENT
+  COURSE_UPDATE
+  QUIZ_REMINDER
+  STREAK_REMINDER
+  GENERAL
+}
+
+enum ChallengeType {
+  MATH_SPRINT
+  SCIENCE_QUIZ
+  WORD_BUILDER
+  LOGIC_PUZZLE
+  GENERAL_KNOWLEDGE
 }

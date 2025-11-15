@@ -6,6 +6,8 @@ import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../types/auth.types';
 import { S3Service } from '../services/s3.service';
+import { CloudinaryService } from '../services/cloudinary.service';
+import { courseValidation } from '../validations/course.validation';
 import prisma from '../config/database';
 
 interface UploadedFile extends Express.Multer.File {
@@ -548,6 +550,167 @@ export class UploadController {
       res.status(500).json({
         success: false,
         message: 'Failed to complete multipart upload'
+      });
+    }
+  }
+
+  // POST /upload-video
+  static async uploadVideo(req: Request, res: Response) {
+    try {
+      const { videoUrl } = req.body;
+
+      // Validate required fields
+      if (!videoUrl) {
+        return res.status(400).json({
+          success: false,
+          message: 'videoUrl is required'
+        });
+      }
+
+      // Validate URL format
+      try {
+        new URL(videoUrl);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid videoUrl format'
+        });
+      }
+
+      // Validate if URL is accessible
+      const isUrlAccessible = await CloudinaryService.validateUrl(videoUrl);
+      if (!isUrlAccessible) {
+        return res.status(400).json({
+          success: false,
+          message: 'Video URL is not accessible or does not exist'
+        });
+      }
+
+      // Generate unique public ID for the video
+      const publicId = `videos/${uuidv4()}`;
+
+      // Upload video to Cloudinary
+      const uploadResult = await CloudinaryService.uploadVideoFromUrl(videoUrl, {
+        public_id: publicId,
+        folder: 'acadevia-videos'
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Video uploaded successfully to Cloudinary',
+        data: {
+          publicId: uploadResult.public_id,
+          secureUrl: uploadResult.secure_url,
+          format: uploadResult.format,
+          resourceType: uploadResult.resource_type,
+          bytes: uploadResult.bytes,
+          width: uploadResult.width,
+          height: uploadResult.height,
+          duration: uploadResult.duration
+        }
+      });
+    } catch (error) {
+      console.error('Upload video error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to upload video'
+      });
+    }
+  }
+
+  // POST /upload/youtube-video
+  static async uploadYouTubeVideo(req: AuthRequest, res: Response) {
+    try {
+      // Validate request body
+      const { error, value } = courseValidation.addYouTubeVideo.validate(req.body);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: error.details[0].message
+        });
+      }
+
+      const { courseId, youtubeUrl, title, description } = value;
+
+      // Validate YouTube URL format
+      const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/;
+      if (!youtubeRegex.test(youtubeUrl)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid YouTube URL format'
+        });
+      }
+
+      // Verify course exists and user has permission
+      const course = await prisma.course.findFirst({
+        where: {
+          id: courseId,
+          instructorId: req.userId!
+        }
+      });
+
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found or no permission'
+        });
+      }
+
+      // Upload video to Cloudinary from YouTube URL
+      const uploadResult = await CloudinaryService.uploadVideoFromUrl(youtubeUrl, {
+        public_id: `course-${courseId}-youtube-${Date.now()}`,
+        folder: `courses/${courseId}/youtube-videos`
+      });
+
+      // Get existing sources or initialize empty array
+      const existingSources = (course.sources as any[]) || [];
+      
+      // Add new YouTube video to sources
+      const newSource = {
+        id: `youtube-${Date.now()}`,
+        type: 'youtube',
+        title: title || 'YouTube Video',
+        description: description || '',
+        url: youtubeUrl,
+        cloudinaryUrl: uploadResult.secure_url,
+        cloudinaryPublicId: uploadResult.public_id,
+        duration: uploadResult.duration,
+        thumbnail: `https://img.youtube.com/vi/${youtubeUrl.match(/[?&]v=([^&]+)/)?.[1] || youtubeUrl.split('/').pop()}/maxresdefault.jpg`,
+        addedAt: new Date().toISOString()
+      };
+
+      const updatedSources = [...existingSources, newSource];
+
+      // Update course with new sources
+      const updatedCourse = await prisma.course.update({
+        where: { id: courseId },
+        data: { sources: updatedSources },
+        select: {
+          id: true,
+          title: true,
+          sources: true
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'YouTube video added to course successfully',
+        data: {
+          course: updatedCourse,
+          video: {
+            cloudinaryUrl: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            duration: uploadResult.duration,
+            originalUrl: youtubeUrl
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('YouTube video upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to upload YouTube video'
       });
     }
   }

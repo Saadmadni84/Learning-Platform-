@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
 interface DataPoint {
@@ -29,6 +29,8 @@ export function LineChart({
   color = '#3B82F6'
 }: LineChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Default data for learning progress
   const defaultData: DataPoint[] = [
@@ -72,6 +74,14 @@ export function LineChart({
   const lastValue = normalizedData[normalizedData.length - 1]?.value || 0;
   const trend = lastValue > firstValue ? 'up' : 'down';
   const trendPercentage = Math.abs(((lastValue - firstValue) / firstValue) * 100).toFixed(1);
+
+  if (!mounted) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-lg">
+        <div className="h-[260px] animate-pulse bg-gray-100 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg">

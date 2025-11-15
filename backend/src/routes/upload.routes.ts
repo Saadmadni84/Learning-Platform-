@@ -45,4 +45,10 @@ router.delete('/:key', UploadController.deleteFile);
 router.get('/presigned-url', UploadController.getPresignedUrl);
 router.post('/complete-multipart', UploadController.completeMultipartUpload);
 
+// Cloudinary video upload (no authentication required for this endpoint)
+router.post('/upload-video', UploadController.uploadVideo);
+
+// YouTube video upload to Cloudinary and add to course sources
+router.post('/youtube-video', UploadController.uploadYouTubeVideo);
+
 export default router;

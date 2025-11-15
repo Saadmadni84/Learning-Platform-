@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    appDir: true,
+    // Remove appDir: true - it's no longer needed
+    serverComponentsExternalPackages: ["mongoose"], // Keep other experimental features
   },
-  trailingSlash: false,
-  images: {
-    domains: ['localhost'],
-  },
+  // Your other config options...
 };
 
 module.exports = nextConfig;

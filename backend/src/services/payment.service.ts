@@ -1,10 +1,10 @@
 import Razorpay from 'razorpay';
-import { config } from '../config/env';
+import { env } from '../config/env';
 import prisma from '../config/database';
 
 const razorpay = new Razorpay({
-  key_id: config.razorpay.keyId,
-  key_secret: config.razorpay.keySecret,
+  key_id: env.RAZORPAY_KEY_ID,
+  key_secret: env.RAZORPAY_KEY_SECRET,
 });
 
 export class PaymentService {

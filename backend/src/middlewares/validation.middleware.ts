@@ -1,17 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
+import { ZodSchema } from 'zod';
 
-export const validateRequest = (schema: Joi.ObjectSchema) => {
+export const validateRequest = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.body);
-    
-    if (error) {
+    try {
+      const validatedData = schema.parse(req.body);
+      req.body = validatedData;
+      next();
+    } catch (error: any) {
       return res.status(400).json({
+        success: false,
         error: 'Validation error',
-        details: error.details.map(detail => detail.message),
+        details: error.errors?.map((err: any) => err.message) || [error.message],
       });
     }
-    
-    next();
   };
 };

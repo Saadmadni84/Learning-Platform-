@@ -1,0 +1,1 @@
+export { LogicPuzzle } from './LogicPuzzle';

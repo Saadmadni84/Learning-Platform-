@@ -62,7 +62,7 @@ export function Dialog({
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div 
           className={`
-            relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} 
+            relative ${className.includes('bg-transparent') ? 'bg-transparent' : 'bg-white'} rounded-lg ${className.includes('shadow-none') ? '' : 'shadow-xl'} w-full ${sizeClasses[size]} 
             transform transition-all duration-200 scale-100 opacity-100
             ${className}
           `}
@@ -99,7 +99,7 @@ export function Dialog({
           )}
 
           {/* Content */}
-          <div className={`px-6 ${title ? 'pb-6' : 'py-6'}`}>
+          <div className={`${className.includes('bg-transparent') ? 'p-0' : `px-6 ${title ? 'pb-6' : 'py-6'}`}`}>
             {children}
           </div>
         </div>

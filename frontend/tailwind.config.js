@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -19,7 +20,9 @@ module.exports = {
       // Font Families
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],
-        'poppins': ['Poppins', 'sans-serif'],
+        'poppins': ['var(--font-poppins)', 'Poppins', 'sans-serif'],
+        'open-sans': ['var(--font-open-sans)', 'Open Sans', 'sans-serif'],
+        'montserrat': ['var(--font-montserrat)', 'Montserrat', 'sans-serif'],
       },
       
       // Custom Colors for Gaming Theme

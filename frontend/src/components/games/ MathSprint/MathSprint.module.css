@@ -1,0 +1,264 @@
+.gameContainer {
+  @apply min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800;
+  @apply flex flex-col items-center justify-center p-6;
+  @apply relative overflow-hidden;
+}
+
+.gameContainer::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cpattern id='grid' width='10' height='10' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 10 0 L 0 0 0 10' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='0.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23grid)'/%3E%3C/svg%3E");
+}
+
+.gameBoard {
+  @apply bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl;
+  @apply border border-white/20 p-8 max-w-4xl w-full;
+  @apply relative z-10;
+}
+
+.gameHeader {
+  @apply flex items-center justify-between mb-8;
+}
+
+.gameTitle {
+  @apply text-4xl font-bold text-white;
+  @apply bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent;
+  @apply drop-shadow-lg;
+}
+
+.scoreBoard {
+  @apply flex gap-6 text-white;
+}
+
+.scoreItem {
+  @apply text-center;
+}
+
+.scoreLabel {
+  @apply text-sm text-white/80 font-medium;
+}
+
+.scoreValue {
+  @apply text-2xl font-bold text-cyan-400;
+  @apply animate-pulse;
+}
+
+.questionCard {
+  @apply bg-gradient-to-r from-blue-600/30 to-purple-600/30;
+  @apply rounded-2xl p-8 mb-8 border border-white/20;
+  @apply backdrop-blur-sm shadow-xl;
+}
+
+.questionText {
+  @apply text-2xl text-white font-semibold mb-6 text-center;
+  @apply leading-relaxed;
+}
+
+.triangleDisplay {
+  @apply flex justify-center mb-6;
+}
+
+.triangleSvg {
+  @apply drop-shadow-lg filter;
+}
+
+.answersGrid {
+  @apply grid grid-cols-2 gap-4 mb-6;
+}
+
+.answerButton {
+  @apply bg-gradient-to-r from-emerald-500 to-teal-600;
+  @apply hover:from-emerald-400 hover:to-teal-500;
+  @apply text-white font-bold py-4 px-6 rounded-xl;
+  @apply transition-all duration-300 ease-out;
+  @apply border-2 border-transparent;
+  @apply shadow-lg hover:shadow-xl;
+  @apply transform hover:scale-105 active:scale-95;
+}
+
+.answerButton:hover {
+  @apply border-white/30;
+}
+
+.answerButtonCorrect {
+  @apply bg-gradient-to-r from-green-500 to-emerald-600;
+  @apply animate-bounce border-green-300;
+}
+
+.answerButtonIncorrect {
+  @apply bg-gradient-to-r from-red-500 to-pink-600;
+  @apply animate-shake border-red-300;
+}
+
+.progressBar {
+  @apply w-full bg-white/20 rounded-full h-3 mb-6;
+  @apply overflow-hidden shadow-inner;
+}
+
+.progressFill {
+  @apply bg-gradient-to-r from-cyan-400 to-blue-500;
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+  @apply shadow-lg;
+}
+
+.timer {
+  @apply text-center mb-6;
+}
+
+.timerDisplay {
+  @apply text-6xl font-bold text-white;
+  @apply bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent;
+  @apply drop-shadow-lg animate-pulse;
+}
+
+.powerUps {
+  @apply flex justify-center gap-4 mb-6;
+}
+
+.powerUpButton {
+  @apply bg-gradient-to-r from-yellow-500 to-orange-600;
+  @apply hover:from-yellow-400 hover:to-orange-500;
+  @apply text-white font-bold py-3 px-6 rounded-full;
+  @apply transition-all duration-300 ease-out;
+  @apply shadow-lg hover:shadow-xl;
+  @apply transform hover:scale-110 active:scale-95;
+  @apply border-2 border-yellow-300/50;
+}
+
+.powerUpButton:disabled {
+  @apply opacity-50 cursor-not-allowed;
+  @apply hover:scale-100 hover:shadow-lg;
+}
+
+.gameOverModal {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+  @apply flex items-center justify-center p-6;
+}
+
+.gameOverContent {
+  @apply bg-white rounded-3xl p-8 max-w-md w-full;
+  @apply shadow-2xl transform animate-bounce-in;
+}
+
+.gameOverTitle {
+  @apply text-3xl font-bold text-center mb-4;
+  @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+}
+
+.finalScore {
+  @apply text-6xl font-bold text-center text-gray-800 mb-6;
+}
+
+.statsGrid {
+  @apply grid grid-cols-2 gap-4 mb-6;
+}
+
+.statItem {
+  @apply text-center p-4 bg-gray-100 rounded-xl;
+}
+
+.statLabel {
+  @apply text-sm text-gray-600 font-medium;
+}
+
+.statValue {
+  @apply text-2xl font-bold text-gray-800;
+}
+
+.restartButton {
+  @apply w-full bg-gradient-to-r from-purple-600 to-pink-600;
+  @apply hover:from-purple-500 hover:to-pink-500;
+  @apply text-white font-bold py-4 px-6 rounded-xl;
+  @apply transition-all duration-300 ease-out;
+  @apply shadow-lg hover:shadow-xl;
+  @apply transform hover:scale-105 active:scale-95;
+}
+
+.streakIndicator {
+  @apply flex items-center gap-2 text-yellow-400;
+}
+
+.streakFlame {
+  @apply animate-bounce;
+}
+
+.difficultySelector {
+  @apply flex gap-2 mb-6 justify-center;
+}
+
+.difficultyButton {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-300;
+  @apply border-2 border-white/30 text-white;
+}
+
+.difficultyButton.active {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-600;
+  @apply border-cyan-400 shadow-lg;
+}
+
+.difficultyButton.inactive {
+  @apply bg-white/10 hover:bg-white/20;
+}
+
+.comboMultiplier {
+  @apply text-center mb-4;
+}
+
+.comboText {
+  @apply text-yellow-400 font-bold text-xl;
+  @apply animate-pulse;
+}
+
+.particleEffect {
+  @apply absolute inset-0 pointer-events-none;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.3s ease-out;
+}
+
+.floatingElements {
+  @apply absolute inset-0 overflow-hidden pointer-events-none;
+}
+
+.mathSymbol {
+  @apply absolute text-white/20 text-6xl font-bold;
+  @apply animate-float;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-10px) rotate(5deg); }
+  66% { transform: translateY(10px) rotate(-5deg); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.glowEffect {
+  @apply animate-pulse;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+.levelUpNotification {
+  @apply fixed top-20 left-1/2 transform -translate-x-1/2;
+  @apply bg-gradient-to-r from-yellow-400 to-orange-500;
+  @apply text-white font-bold py-3 px-8 rounded-full;
+  @apply shadow-2xl animate-bounce-in z-40;
+}

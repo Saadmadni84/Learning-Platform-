@@ -1,30 +1,28 @@
-// controllers/auth.controller.ts
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
-import { generateOTP, isValidEmail, isValidPhone } from '../utils/helpers';
-import { sendEmail } from '../services/email.service';
-import { sendSMS } from '../services/sms.service';
+import { generateOTP, isValidEmail } from '../utils/helpers';
+import emailService from '../services/email.service';
 
 export class AuthController {
   // POST /auth/signup
   static async signup(req: Request, res: Response) {
     try {
-      const { name, email, phone, password } = req.body;
+      const { email, password, firstName, lastName, role = 'STUDENT' } = req.body;
       
       // Input validation
-      if (!name || !password) {
+      if (!email || !password) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Name and password are required' 
+          message: 'Email and password are required' 
         });
       }
 
-      if (!email && !phone) {
+      if (!isValidEmail(email)) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Either email or phone is required' 
+          message: 'Invalid email format' 
         });
       }
 
@@ -35,420 +33,226 @@ export class AuthController {
         });
       }
 
-      // Check if user exists - FIXED VERSION
-      const searchConditions = [];
-
-      // Only add email condition if email exists and is valid
-      if (email && email.trim()) {
-        if (!isValidEmail(email.trim())) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Invalid email format' 
-          });
-        }
-        searchConditions.push({ email: email.trim().toLowerCase() });
-      }
-
-      // Only add phone condition if phone exists and is valid  
-      if (phone && phone.trim()) {
-        if (!isValidPhone(phone.trim())) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Invalid phone format' 
-          });
-        }
-        searchConditions.push({ phone: phone.trim() });
-      }
-
-      // Only query if we have valid search criteria
-      let existingUser = null;
-      if (searchConditions.length > 0) {
-        existingUser = await prisma.user.findFirst({
-          where: {
-            OR: searchConditions
-          }
-        });
-      }
+      // Check if user exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
 
       if (existingUser) {
         return res.status(400).json({ 
           success: false, 
-          message: 'User already exists with this email or phone' 
+          message: 'User already exists with this email' 
         });
       }
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 12);
       
-      // Generate OTP
-      const otp = generateOTP();
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      // Generate username from email
+      const username = email.split('@')[0] + Math.random().toString(36).substr(2, 4);
       
-      // FIXED: Create user with proper schema structure
+      // Create user
       const user = await prisma.user.create({
         data: {
-          name,
-          email: email?.toLowerCase(),
-          phone,
+          email: email.toLowerCase(),
+          username,
           password: hashedPassword,
-          otp,
-          otpExpiry,
-          isEmailVerified: false,
-          isPhoneVerified: false,
-          profile: {
-            create: {
-              points: 0,
-              level: 1,
-              experience: 0,
-              streak: 0,
-              longestStreak: 0,
-              totalStudyTime: 0,
-              bio: '',
-              preferences: {
-                theme: 'system',
-                language: 'en',
-                notifications: {
-                  email: true,
-                  sms: false,
-                  push: true,
-                  achievements: true,
-                  courseReminders: true,
-                  weeklyDigest: true
-                },
-                privacy: {
-                  showProfile: true,
-                  showProgress: true,
-                  showAchievements: true
-                }
-              }
-            }
-          }
+          firstName: firstName || '',
+          lastName: lastName || '',
+          role: role.toUpperCase(),
+          isVerified: false,
+          emailVerificationToken: generateOTP(),
+          emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         },
-        include: {
-          profile: true
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isVerified: true,
+          emailVerificationToken: true,
+          createdAt: true
         }
       });
 
-      // Send OTP - FIXED VERSION
+      // Send verification email
       try {
-        const notifications = [];
-        
-        if (email) {
-          const emailResult = await sendEmail({
-            to: email,
-            subject: '🔐 Verify Your Account - Learning Platform',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-                  <h1 style="color: white; margin: 0;">Welcome ${name}! 🎉</h1>
-                </div>
-                <div style="padding: 30px; background-color: #f8f9fa;">
-                  <h2 style="color: #333;">Verify Your Account</h2>
-                  <p style="color: #666; line-height: 1.6;">
-                    Thank you for joining our learning platform! Please use the verification code below to activate your account:
-                  </p>
-                  <div style="text-align: center; margin: 30px 0;">
-                    <span style="font-size: 32px; font-weight: bold; color: #667eea; padding: 20px; background: #f8f9fa; border: 2px dashed #667eea; border-radius: 10px;">
-                      ${otp}
-                    </span>
-                  </div>
-                  <p style="color: #e53e3e; text-align: center; font-size: 14px;">
-                    This code will expire in 10 minutes
-                  </p>
-                  <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                    If you didn't create this account, please ignore this email.
-                  </p>
-                </div>
-              </div>
-            `,
-            text: `Welcome ${name}! Your verification code is: ${otp}. This code will expire in 10 minutes.`
-          });
-          
-          if (emailResult) {
-            notifications.push('email');
-          }
-        }
-        
-        if (phone) {
-          const smsResult = await sendSMS({
-            to: phone,
-            message: `🎉 Welcome ${name}! Your Learning Platform verification code: ${otp} (expires in 10 minutes). Start your learning journey today!`
-          });
-          
-          if (smsResult) {
-            notifications.push('SMS');
-          }
-        }
-
-        // Response with notification status
-        let message = 'User registered successfully.';
-        if (notifications.length > 0) {
-          message += ` Verification code sent via ${notifications.join(' and ')}.`;
-        } else {
-          message += ' Please note: verification code could not be sent.';
-        }
-
-        res.status(201).json({
-          success: true,
-          message,
-          userId: user.id,
-          verificationRequired: true,
-          notificationsSent: notifications,
-          otpExpiresAt: otpExpiry.toISOString()
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Verify your Acadevia account',
+          html: `
+            <h2>Welcome to Acadevia!</h2>
+            <p>Please verify your email address by clicking the link below:</p>
+            <a href="${process.env.FRONTEND_URL}/verify-email?token=${user.emailVerificationToken}">
+              Verify Email
+            </a>
+            <p>This link will expire in 24 hours.</p>
+          `
         });
-
-      } catch (notificationError) {
-        console.error('Notification sending error:', notificationError);
-        
-        // Still return success for user creation, but note notification failure
-        res.status(201).json({
-          success: true,
-          message: 'User registered successfully, but verification code could not be sent. Please request a new code.',
-          userId: user.id,
-          verificationRequired: true,
-          notificationError: true
-        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        // Don't fail signup if email fails
       }
+
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully. Please check your email for verification.',
+        user
+      });
 
     } catch (error) {
       console.error('Signup error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Registration failed. Please try again.' 
+        message: 'Server error during signup' 
       });
     }
   }
 
-  // POST /auth/login - FIXED VERSION
+  // POST /auth/login
   static async login(req: Request, res: Response) {
     try {
-      const { identifier, password } = req.body;
-      
-      // Input validation
-      if (!identifier || !password) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email/phone and password are required' 
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
         });
       }
 
-      // Build proper search conditions
-      const searchConditions = [];
-      const trimmedIdentifier = identifier.trim();
-      
-      if (isValidEmail(trimmedIdentifier)) {
-        searchConditions.push({ email: trimmedIdentifier.toLowerCase() });
-      } else if (isValidPhone(trimmedIdentifier)) {
-        searchConditions.push({ phone: trimmedIdentifier });
-      } else {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid email or phone format' 
-        });
-      }
-
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: searchConditions
-        },
-        include: {
-          profile: true
+      // Find user
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          password: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isVerified: true,
+          level: true,
+          points: true,
+          badges: true,
+          achievements: true,
+          avatar: true,
+          bio: true
         }
       });
 
       if (!user) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid credentials' 
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
         });
       }
 
-      // FIXED: Check verification status using correct fields
-      const isEmailLogin = isValidEmail(trimmedIdentifier);
-      const isPhoneLogin = isValidPhone(trimmedIdentifier);
-      
-      if (isEmailLogin && !user.isEmailVerified) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please verify your email first',
-          requiresVerification: true,
-          verificationType: 'email',
-          userId: user.id
-        });
-      }
-      
-      if (isPhoneLogin && !user.isPhoneVerified) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please verify your phone first',
-          requiresVerification: true,
-          verificationType: 'phone',
-          userId: user.id
+      // Check password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
         });
       }
 
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid credentials' 
-        });
-      }
-
-      // FIXED: Update last login with correct field name
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { 
-          lastLoginAt: new Date(),
-          lastActiveAt: new Date()
-        }
-      });
-
-      // Generate JWT tokens
-      const token = jwt.sign(
+      // Generate tokens
+      const accessToken = jwt.sign(
         { 
-          userId: user.id,
-          email: user.email,
-          name: user.name
-        }, 
-        process.env.JWT_SECRET!, 
-        { expiresIn: '7d' }
+          userId: user.id, 
+          email: user.email, 
+          role: user.role 
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '15m' }
       );
 
       const refreshToken = jwt.sign(
         { userId: user.id },
         process.env.REFRESH_JWT_SECRET!,
-        { expiresIn: '30d' }
+        { expiresIn: '7d' }
       );
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
 
       res.status(200).json({
         success: true,
         message: 'Login successful',
-        token,
-        refreshToken,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          avatar: user.avatar,
-          isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
-          profile: {
-            points: user.profile?.points || 0,
-            level: user.profile?.level || 1,
-            experience: user.profile?.experience || 0,
-            streak: user.profile?.streak || 0,
-            longestStreak: user.profile?.longestStreak || 0
-          }
-        }
+        user: userWithoutPassword,
+        accessToken,
+        refreshToken
       });
+
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Login failed. Please try again.' 
+        message: 'Server error during login' 
       });
     }
   }
 
-  // POST /auth/send-otp - FIXED VERSION
+  // POST /auth/send-otp
   static async sendOTP(req: Request, res: Response) {
     try {
-      const { identifier, type } = req.body; // type: 'verification' | 'password-reset'
-      
-      if (!identifier) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email or phone is required' 
+      const { email, type = 'email' } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
         });
       }
 
-      // Build proper search conditions
-      const searchConditions = [];
-      const trimmedIdentifier = identifier.trim();
-      
-      if (isValidEmail(trimmedIdentifier)) {
-        searchConditions.push({ email: trimmedIdentifier.toLowerCase() });
-      } else if (isValidPhone(trimmedIdentifier)) {
-        searchConditions.push({ phone: trimmedIdentifier });
-      } else {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid email or phone format' 
-        });
-      }
-
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: searchConditions
-        }
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
       });
 
       if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'User not found' 
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
         });
       }
 
       const otp = generateOTP();
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+      // Update user with OTP
       await prisma.user.update({
         where: { id: user.id },
-        data: { otp, otpExpiry }
+        data: {
+          emailVerificationToken: otp,
+          emailVerificationExpires: otpExpiry
+        }
       });
 
-      // FIXED: Send OTP using proper service functions
+      // Send OTP via email
       try {
-        const notifications = [];
-        
-        if (user.email && isValidEmail(trimmedIdentifier)) {
-          const emailResult = await sendEmail({
-            to: user.email,
-            subject: type === 'password-reset' 
-              ? '🔐 Password Reset Code' 
-              : '🔐 Verification Code',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #333;">Hello ${user.name}!</h2>
-                <p>Your ${type === 'password-reset' ? 'password reset' : 'verification'} code is:</p>
-                <div style="text-align: center; margin: 20px 0;">
-                  <span style="font-size: 32px; font-weight: bold; color: #667eea; padding: 20px; background: #f8f9fa; border-radius: 10px;">${otp}</span>
-                </div>
-                <p>This code will expire in 10 minutes.</p>
-              </div>
-            `
-          });
-          
-          if (emailResult) {
-            notifications.push('email');
-          }
-        }
-        
-        if (user.phone && isValidPhone(trimmedIdentifier)) {
-          const smsResult = await sendSMS({
-            to: user.phone,
-            message: `🔐 Your ${type === 'password-reset' ? 'password reset' : 'verification'} code: ${otp} (expires in 10 minutes). Learning Platform.`
-          });
-          
-          if (smsResult) {
-            notifications.push('SMS');
-          }
-        }
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Your Acadevia OTP',
+          html: `
+            <h2>Your OTP Code</h2>
+            <p>Your OTP code is: <strong>${otp}</strong></p>
+            <p>This code will expire in 10 minutes.</p>
+          `
+        });
 
         res.status(200).json({
           success: true,
-          message: `OTP sent successfully via ${notifications.join(' and ')}`,
-          expiresIn: 600
+          message: 'OTP sent successfully'
         });
-        
-      } catch (notificationError) {
-        console.error('OTP notification error:', notificationError);
-        res.status(500).json({ 
-          success: false, 
-          message: 'Failed to send OTP. Please try again.' 
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to send OTP'
         });
       }
 
@@ -456,90 +260,87 @@ export class AuthController {
       console.error('Send OTP error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Failed to send OTP. Please try again.' 
+        message: 'Server error during OTP sending' 
       });
     }
   }
 
-  // POST /auth/verify-otp - FIXED VERSION
+  // POST /auth/verify-otp
   static async verifyOTP(req: Request, res: Response) {
     try {
-      const { identifier, otp, type } = req.body;
-      
-      if (!identifier || !otp) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Identifier and OTP are required' 
+      const { email, otp, type = 'email' } = req.body;
+
+      if (!email || !otp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and OTP are required'
         });
       }
 
-      // Build proper search conditions
-      const searchConditions = [];
-      const trimmedIdentifier = identifier.trim();
-      
-      if (isValidEmail(trimmedIdentifier)) {
-        searchConditions.push({ email: trimmedIdentifier.toLowerCase() });
-      } else if (isValidPhone(trimmedIdentifier)) {
-        searchConditions.push({ phone: trimmedIdentifier });
-      } else {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid identifier format' 
-        });
-      }
-
-      const user = await prisma.user.findFirst({
-        where: {
-          AND: [
-            { OR: searchConditions },
-            { otp: otp.toString() },
-            { otpExpiry: { gt: new Date() } }
-          ]
-        }
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
       });
 
       if (!user) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid or expired OTP' 
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
         });
       }
 
-      // FIXED: Update verification status with correct field names
-      const updateData: any = {
-        otp: null,
-        otpExpiry: null
-      };
-
-      if (type !== 'password-reset') {
-        if (isValidEmail(trimmedIdentifier)) {
-          updateData.isEmailVerified = true;
-          updateData.emailVerifiedAt = new Date();
-        }
-        if (isValidPhone(trimmedIdentifier)) {
-          updateData.isPhoneVerified = true;
-          updateData.phoneVerifiedAt = new Date();
-        }
+      // Check OTP
+      if (user.emailVerificationToken !== otp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid OTP'
+        });
       }
 
+      // Check expiry
+      if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP has expired'
+        });
+      }
+
+      // Verify user
       await prisma.user.update({
         where: { id: user.id },
-        data: updateData
+        data: {
+          isVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpires: null
+        }
       });
 
       res.status(200).json({
         success: true,
-        message: type === 'password-reset' 
-          ? 'OTP verified. You can now reset your password.' 
-          : 'Account verified successfully!',
-        userId: user.id,
-        canResetPassword: type === 'password-reset'
+        message: 'Email verified successfully'
       });
+
     } catch (error) {
       console.error('Verify OTP error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Verification failed. Please try again.' 
+        message: 'Server error during OTP verification' 
+      });
+    }
+  }
+
+  // POST /auth/logout
+  static async logout(req: Request, res: Response) {
+    try {
+      // In a real app, you might want to blacklist the token
+      res.status(200).json({
+        success: true,
+        message: 'Logout successful'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error during logout' 
       });
     }
   }
@@ -548,70 +349,55 @@ export class AuthController {
   static async refreshToken(req: Request, res: Response) {
     try {
       const { refreshToken } = req.body;
-      
+
       if (!refreshToken) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Refresh token is required' 
+        return res.status(400).json({
+          success: false,
+          message: 'Refresh token is required'
         });
       }
 
+      // Verify refresh token
       const decoded = jwt.verify(refreshToken, process.env.REFRESH_JWT_SECRET!) as any;
+      
+      // Find user
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        include: { profile: true }
+        select: {
+          id: true,
+          email: true,
+          role: true
+        }
       });
 
       if (!user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Invalid refresh token' 
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid refresh token'
         });
       }
 
-      const newToken = jwt.sign(
+      // Generate new access token
+      const accessToken = jwt.sign(
         { 
-          userId: user.id,
-          email: user.email,
-          name: user.name
+          userId: user.id, 
+          email: user.email, 
+          role: user.role 
         },
         process.env.JWT_SECRET!,
-        { expiresIn: '7d' }
+        { expiresIn: '15m' }
       );
 
       res.status(200).json({
         success: true,
-        token: newToken,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          avatar: user.avatar,
-          profile: user.profile
-        }
+        accessToken
       });
+
     } catch (error) {
       console.error('Refresh token error:', error);
       res.status(401).json({ 
         success: false, 
-        message: 'Invalid or expired refresh token' 
-      });
-    }
-  }
-
-  // POST /auth/logout
-  static async logout(req: Request, res: Response) {
-    try {
-      res.status(200).json({
-        success: true,
-        message: 'Logged out successfully'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Logout failed' 
+        message: 'Invalid refresh token' 
       });
     }
   }

@@ -1,0 +1,38 @@
+{
+  "frontend/public/images/logo.png": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/school-bg.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/video-thumbnail.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/alex.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/default-avatar.png": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/emily.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/john.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/mike.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/profile.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/images/avatar/sarah.jpg": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/videos/Demo.mp4": {
+    "error": "Must supply api_key"
+  },
+  "frontend/public/videos/platform-demo.mp4": {
+    "error": "Must supply api_key"
+  }
+}

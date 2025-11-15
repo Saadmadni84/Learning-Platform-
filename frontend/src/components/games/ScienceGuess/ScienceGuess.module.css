@@ -1,0 +1,444 @@
+/* Science Guess Game Styles */
+.gameContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.floatingElements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scienceSymbol {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+.levelUpNotification {
+  position: fixed;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(45deg, #ff6b6b, #feca57);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  z-index: 1000;
+  animation: levelUp 2s ease-in-out;
+}
+
+@keyframes levelUp {
+  0% { transform: translateX(-50%) scale(0); opacity: 0; }
+  50% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+.gameBoard {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 2rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  max-width: 800px;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.gameHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.gameTitle {
+  font-size: 2.5rem;
+  font-weight: bold;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1rem;
+}
+
+.scoreBoard {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.scoreItem {
+  text-align: center;
+  background: linear-gradient(45deg, #f093fb, #f5576c);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  min-width: 80px;
+}
+
+.scoreLabel {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.scoreValue {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.streakIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.streakFlame {
+  animation: flicker 1s ease-in-out infinite alternate;
+}
+
+@keyframes flicker {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); }
+}
+
+.difficultySelector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.difficultyButton {
+  padding: 0.5rem 1rem;
+  border: 2px solid #ddd;
+  border-radius: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.difficultyButton.active {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+  border-color: #667eea;
+  transform: scale(1.05);
+}
+
+.difficultyButton.inactive:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.timer {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.timerDisplay {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  display: inline-block;
+}
+
+.progressBar {
+  width: 100%;
+  height: 0.5rem;
+  background: #e0e0e0;
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border-radius: 1rem;
+  transition: width 0.3s ease;
+}
+
+.comboMultiplier {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.comboText {
+  background: linear-gradient(45deg, #ff6b6b, #feca57);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-weight: bold;
+  display: inline-block;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.05); }
+}
+
+.questionCard {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.questionText {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.hintDisplay {
+  background: linear-gradient(45deg, #a8edea, #fed6e3);
+  padding: 1rem;
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #667eea;
+}
+
+.hintLabel {
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 0.5rem;
+}
+
+.hintText {
+  color: #555;
+  font-style: italic;
+}
+
+.answersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.answerButton {
+  padding: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.answerButton:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+}
+
+.answerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.answerButtonCorrect {
+  border-color: #4caf50;
+  background: #e8f5e8;
+  color: #2e7d32;
+  animation: correctAnswer 0.6s ease-in-out;
+}
+
+.answerButtonIncorrect {
+  border-color: #f44336;
+  background: #ffebee;
+  color: #c62828;
+  animation: incorrectAnswer 0.6s ease-in-out;
+}
+
+@keyframes correctAnswer {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes incorrectAnswer {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+
+.powerUps {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.powerUpButton {
+  padding: 0.5rem 1rem;
+  border: 2px solid #667eea;
+  border-radius: 1rem;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.powerUpButton:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.powerUpButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc;
+  border-color: #ccc;
+}
+
+.gameOverModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.gameOverContent {
+  background: white;
+  border-radius: 2rem;
+  padding: 3rem;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+.gameOverTitle {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.finalScore {
+  font-size: 3rem;
+  font-weight: bold;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statItem {
+  background: #f8f9ff;
+  padding: 1rem;
+  border-radius: 1rem;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.restartButton {
+  padding: 1rem 2rem;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.restartButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .gameContainer {
+    padding: 1rem;
+  }
+  
+  .gameBoard {
+    padding: 1.5rem;
+  }
+  
+  .gameTitle {
+    font-size: 2rem;
+  }
+  
+  .questionText {
+    font-size: 1.2rem;
+  }
+  
+  .answersGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .scoreBoard {
+    gap: 1rem;
+  }
+  
+  .powerUps {
+    gap: 0.5rem;
+  }
+  
+  .powerUpButton {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}

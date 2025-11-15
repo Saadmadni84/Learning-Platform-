@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { 
   X, Menu, Home, BookOpen, BarChart3, Trophy, User, 
   Settings, LogOut, ChevronDown, ChevronRight, 
@@ -26,7 +26,24 @@ interface MenuItem {
 
 export default function Sidebar({ isOpen, onClose, className = '' }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+
+  const handleLogout = () => {
+    // Clear login data
+    localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('userProfile')
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    localStorage.removeItem('userType')
+    
+    // Close sidebar
+    onClose()
+    
+    // Redirect to login page
+    router.push('/login')
+  }
 
   // Navigation menu items
   const menuItems: MenuItem[] = [
@@ -102,40 +119,40 @@ export default function Sidebar({ isOpen, onClose, className = '' }: SidebarProp
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 h-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50
+        fixed top-0 left-0 h-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         w-80 lg:w-72
         ${className}
       `}>
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800">GameLearn</h2>
-              <p className="text-sm text-gray-500">Learning Platform</p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">GameLearn</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Learning Platform</p>
             </div>
           </div>
           
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors lg:hidden"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
         {/* Search Bar */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search courses..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
@@ -154,25 +171,25 @@ export default function Sidebar({ isOpen, onClose, className = '' }: SidebarProp
                       className={`
                         w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
                         ${isActive(item.href) 
-                          ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' 
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400' 
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'
                         }
                         group-hover:shadow-sm
                       `}
                     >
                       <div className="flex items-center gap-3">
-                        <item.icon className={`w-5 h-5 ${isActive(item.href) ? 'text-blue-600' : 'text-gray-500'}`} />
+                        <item.icon className={`w-5 h-5 ${isActive(item.href) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
                         <span className="font-medium">{item.label}</span>
                         {item.badge && (
-                          <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+                          <span className="px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-full">
                             {item.badge}
                           </span>
                         )}
                       </div>
                       {isMenuExpanded(item.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                   ) : (
@@ -183,16 +200,16 @@ export default function Sidebar({ isOpen, onClose, className = '' }: SidebarProp
                       className={`
                         flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
                         ${isActive(item.href) 
-                          ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' 
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400' 
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'
                         }
                         group-hover:shadow-sm
                       `}
                     >
-                      <item.icon className={`w-5 h-5 ${isActive(item.href) ? 'text-blue-600' : 'text-gray-500'}`} />
+                      <item.icon className={`w-5 h-5 ${isActive(item.href) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
                       <span className="font-medium">{item.label}</span>
                       {item.badge && (
-                        <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+                        <span className="px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-full">
                           {item.badge}
                         </span>
                       )}
@@ -268,6 +285,14 @@ export default function Sidebar({ isOpen, onClose, className = '' }: SidebarProp
             <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
               <Settings className="w-4 h-4" />
               <span className="text-sm">Settings</span>
+            </button>
+
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-300"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Logout</span>
             </button>
           </div>
         </div>

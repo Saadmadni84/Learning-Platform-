@@ -25,15 +25,22 @@ export const authenticateToken = async (
       where: { id: decoded.userId }
     });
 
-   if (!user || !user.isVerified) {
-    return res.status(401).json({
+    if (!user || !user.isVerified) {
+      return res.status(401).json({
         success: false,
         message: 'Invalid token'
-    });
-}
-    
+      });
+    }
 
-    
+    req.userId = user.id;
+    req.user = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role as 'STUDENT' | 'INSTRUCTOR' | 'ADMIN',
+      isActive: user.isActive
+    };
+
     next();
   } catch (error) {
     return res.status(401).json({
