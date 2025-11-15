@@ -33,8 +33,6 @@ export function BarChart({
 }: BarchartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [animatedValues, setAnimatedValues] = useState<number[]>([]);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   // Gamified learning platform data
   const defaultData: BarData[] = [
@@ -132,14 +130,6 @@ export function BarChart({
       </div>
     );
   };
-
-  if (!mounted) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        <div className="h-[260px] animate-pulse bg-gray-100 rounded-xl" />
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">

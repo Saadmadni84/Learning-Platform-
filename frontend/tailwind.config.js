@@ -20,9 +20,7 @@ module.exports = {
       // Font Families
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],
-        'poppins': ['var(--font-poppins)', 'Poppins', 'sans-serif'],
-        'open-sans': ['var(--font-open-sans)', 'Open Sans', 'sans-serif'],
-        'montserrat': ['var(--font-montserrat)', 'Montserrat', 'sans-serif'],
+        'poppins': ['Poppins', 'sans-serif'],
       },
       
       // Custom Colors for Gaming Theme

@@ -114,29 +114,29 @@ export default function ProgressPage() {
   const pieData = useMemo(() => subjects.map(s => ({ label: s.subject, value: s.completion, color: s.color })), [subjects])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-blue-50 py-10">
       <div className="container mx-auto px-4">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-poppins font-bold text-gray-900 dark:text-gray-100">Your Progress Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2 font-inter">Track each subject, earn badges, and keep your learning streak alive!</p>
+          <h1 className="text-4xl font-poppins font-bold text-gray-900">Your Progress Dashboard</h1>
+          <p className="text-gray-600 mt-2 font-inter">Track each subject, earn badges, and keep your learning streak alive!</p>
         </div>
 
         {/* Overview Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <PieChart title="Completion by Subject" data={pieData} size={240} />
-          <div className="col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Weekly Streaks</h3>
+          <div className="col-span-2 bg-white p-6 rounded-xl shadow-lg">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Weekly Streaks</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {subjects.slice(0, 4).map(s => (
-                <div key={s.subject} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div key={s.subject} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{s.icon}</span>
                     <div>
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{s.subject}</div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{s.streakDays} day streak</div>
+                      <div className="text-sm text-gray-600">{s.subject}</div>
+                      <div className="text-lg font-semibold text-gray-900">{s.streakDays} day streak</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                  <div className="flex items-center gap-2 text-orange-600">
                     <Flame className="w-5 h-5" />
                     <span className="text-sm font-semibold">Keep it up!</span>
                   </div>
@@ -149,17 +149,17 @@ export default function ProgressPage() {
         {/* Subject Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {subjects.map((s) => (
-            <div key={s.subject} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="p-5 border-b dark:border-gray-700 flex items-center justify-between">
+            <div key={s.subject} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="p-5 border-b flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{s.icon}</span>
                   <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Subject</div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{s.subject}</h3>
+                    <div className="text-sm text-gray-500">Subject</div>
+                    <h3 className="text-xl font-bold text-gray-900">{s.subject}</h3>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Completion</div>
+                  <div className="text-sm text-gray-500">Completion</div>
                   <div className="text-lg font-semibold" style={{ color: s.color }}>{s.completion}%</div>
                 </div>
               </div>
@@ -186,21 +186,21 @@ export default function ProgressPage() {
 
                 {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">XP Earned</div>
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-center gap-1">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-xs text-gray-500">XP Earned</div>
+                    <div className="text-lg font-semibold text-gray-900 flex items-center justify-center gap-1">
                       <Trophy className="w-4 h-4 text-yellow-500" /> {s.xp}
                     </div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Avg Score</div>
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-center gap-1">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-xs text-gray-500">Avg Score</div>
+                    <div className="text-lg font-semibold text-gray-900 flex items-center justify-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500" /> {s.averageScore}%
                     </div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Tests</div>
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-center gap-1">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-xs text-gray-500">Tests</div>
+                    <div className="text-lg font-semibold text-gray-900 flex items-center justify-center gap-1">
                       <CalendarDays className="w-4 h-4 text-blue-500" /> {s.testsTaken}
                     </div>
                   </div>

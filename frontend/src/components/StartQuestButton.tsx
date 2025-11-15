@@ -37,7 +37,7 @@ export default function StartQuestButton({ userId, difficulty = 'easy', classNam
 
       setSuccess(true)
       setTimeout(() => {
-        router.push(`/student/courses`)
+        router.push(`/student/courses/${data.session.sessionId}`)
       }, 600)
     } catch (e: any) {
       console.error(e)

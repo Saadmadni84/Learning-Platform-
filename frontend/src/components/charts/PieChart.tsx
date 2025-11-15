@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { PieChart as PieIcon, BookOpen } from 'lucide-react';
 
 interface PieData {
@@ -26,15 +26,6 @@ export function PieChart({
   animated = true
 }: PieChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        <div className="h-[260px] animate-pulse bg-gray-100 rounded-xl" />
-      </div>
-    );
-  }
 
   // Default data for subject distribution
   const defaultData: PieData[] = [
